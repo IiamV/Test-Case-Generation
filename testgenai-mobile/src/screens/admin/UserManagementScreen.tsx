@@ -30,6 +30,7 @@ const UserManagementScreen: React.FC<Props> = ({ navigation }) => {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showDeleted, setShowDeleted] = useState(false);
+  const isUserDeleteEnabled = false;
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -57,6 +58,14 @@ const UserManagementScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleSoftDelete = (user: AdminUser) => {
+    if (!isUserDeleteEnabled) {
+      Toast.show({
+        type: "info",
+        text1: "Delete user is temporarily disabled",
+      });
+      return;
+    }
+
     Alert.alert(
       "Delete User",
       `Are you sure you want to delete "${user.name}"? This can be reversed later.`,
@@ -80,6 +89,14 @@ const UserManagementScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleRestore = (user: AdminUser) => {
+    if (!isUserDeleteEnabled) {
+      Toast.show({
+        type: "info",
+        text1: "Restore user is temporarily disabled",
+      });
+      return;
+    }
+
     Alert.alert(
       "Restore User",
       `Restore "${user.name}" back to active?`,
@@ -190,16 +207,26 @@ const UserManagementScreen: React.FC<Props> = ({ navigation }) => {
         </View>
         {item.isActive ? (
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: colors.destructive + "12" }]}
+            style={[
+              styles.actionBtn,
+              { backgroundColor: colors.destructive + "12" },
+              !isUserDeleteEnabled && styles.actionBtnDisabled,
+            ]}
             onPress={() => handleSoftDelete(item)}
+            disabled={!isUserDeleteEnabled}
             activeOpacity={0.7}
           >
             <Ionicons name="trash-outline" size={18} color={colors.destructive} />
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: colors.success + "12" }]}
+            style={[
+              styles.actionBtn,
+              { backgroundColor: colors.success + "12" },
+              !isUserDeleteEnabled && styles.actionBtnDisabled,
+            ]}
             onPress={() => handleRestore(item)}
+            disabled={!isUserDeleteEnabled}
             activeOpacity={0.7}
           >
             <Ionicons name="refresh-outline" size={18} color={colors.success} />
@@ -359,5 +386,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
+  },
+  actionBtnDisabled: {
+    opacity: 0.35,
   },
 });

@@ -293,59 +293,33 @@ export const api = {
     error?: string;
   }> {
     try {
-      // Backend expects username/password and returns a RedirectResponse (302)
-      // We use redirect: 'manual' to catch the 302 and extract the URL if needed,
-      // or we just follow it. Since the current backend doesn't return a token 
-      // in JSON or Redirect URL, this is a placeholder for how it SHOULD work 
-      // if the backend was slightly updated or if we detect success via 302.
-      const response = await fetch(`${API_BASE_URL}/admin/login`, {
+      const response = (await apiCall("/admin/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-        redirect: "manual",
-      });
+        body: JSON.stringify({
+          username: username.trim(),
+          password,
+        }),
+      })) as Record<string, unknown>;
 
-      // If backend returns 302 (Found), 303 (See Other), or an opaque redirect (0 in some web environments)
-      // we consider it a success for this specific "matching backend" task.
-      if (
-        response.status === 302 ||
-        response.status === 303 ||
-        response.status === 0 ||
-        response.ok
-      ) {
-        let token = "";
-        try {
-          const data = await response.json();
-          if (data.token || data.access_token) {
-            token = data.token || data.access_token;
-          }
-        } catch (e) {
-          // Response was not JSON or failed to parse
-        }
+      const token =
+        (response.token as string | undefined) ||
+        (response.access_token as string | undefined);
 
-        // If no token found from backend, fallback to dummy only for matching task
-        if (!token && (response.status === 302 || response.status === 303 || response.status === 0)) {
-            token = "dummy-session-token";
-        }
-
-        if (!token && response.ok) {
-            // If response is OK but no token, we might have a problem unless it's a redirect
-            token = "dummy-session-token";
-        }
-
+      if (!token) {
         return {
-          success: true,
-          user: { name: username, email: `${username}@admin.local`, role: "admin" },
-          token: token,
+          success: false,
+          error: "Login succeeded but no auth token was returned",
         };
       }
 
-      const errorData = await response.json().catch(() => ({}));
       return {
-        success: false,
-        error: errorData.detail || "Invalid credentials",
+        success: true,
+        user: {
+          name: username.trim(),
+          email: `${username.trim()}@admin.local`,
+          role: "admin",
+        },
+        token,
       };
     } catch (err) {
       return {
