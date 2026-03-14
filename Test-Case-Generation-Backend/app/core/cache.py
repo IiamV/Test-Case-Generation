@@ -25,10 +25,7 @@ async def redis_healthcheck() -> None:
     """
 
     # Perform a basic connectivity check against the Redis server
-    # TODO: Add await
-    # Currently can't use await with ping() as it causes Type Error
-    # An issue for this was opened on Redis GitHub already
-    if redis_client.ping():
+    if await redis_client.ping():
         await redis_client.aclose()
         return
 
@@ -98,3 +95,20 @@ async def cache_set(
 
     except Exception as e:
         raise Exception(f"Redis Set Failed: {e}")
+
+
+async def cache_increment(key: str, expire_in: int) -> int:
+    """
+    Atomically increment a counter in Redis, setting expiry on first creation.
+
+    :param key: The Redis key to increment.
+    :param expire_in: TTL in seconds applied only when the key is first created.
+    :return: The new counter value after increment.
+    """
+    try:
+        count = await redis_client.incr(key)
+        if count == 1:
+            await redis_client.expire(key, expire_in)
+        return count
+    except Exception as e:
+        raise Exception(f"Redis Increment Failed: {e}")
